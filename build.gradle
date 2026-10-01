@@ -31,3 +31,36 @@ dependencies {
 tasks.named('test') {
 	useJUnitPlatform()
 }
+
+// ---- Next.js frontend ----
+// ./gradlew deployFrontend : Next.js(standalone)를 빌드해서 ./frontend 로 복사
+// 이후 bootRun / java -jar 로 Spring(8080)과 Next.js(3000)가 함께 실행됨 (NextJsServer)
+def frontendSourceDir = file(findProperty('frontendSourceDir') ?: '../../route-handlers-demo')
+def npmCommand = System.getProperty('os.name').toLowerCase().contains('windows') ? 'npm.cmd' : 'npm'
+
+tasks.register('installFrontend', Exec) {
+	group = 'frontend'
+	description = 'Installs Next.js dependencies (npm ci).'
+	workingDir = frontendSourceDir
+	commandLine npmCommand, 'ci'
+	inputs.file(new File(frontendSourceDir, 'package-lock.json'))
+	outputs.dir(new File(frontendSourceDir, 'node_modules'))
+}
+
+tasks.register('buildFrontend', Exec) {
+	group = 'frontend'
+	description = 'Builds the Next.js app as a standalone server.'
+	dependsOn 'installFrontend'
+	workingDir = frontendSourceDir
+	commandLine npmCommand, 'run', 'build'
+}
+
+tasks.register('deployFrontend', Sync) {
+	group = 'frontend'
+	description = 'Copies the Next.js standalone build into ./frontend.'
+	dependsOn 'buildFrontend'
+	into layout.projectDirectory.dir('frontend')
+	from(new File(frontendSourceDir, '.next/standalone'))
+	from(new File(frontendSourceDir, '.next/static')) { into '.next/static' }
+	from(new File(frontendSourceDir, 'public')) { into 'public' }
+}

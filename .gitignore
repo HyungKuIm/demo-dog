@@ -35,3 +35,6 @@ out/
 
 ### VS Code ###
 .vscode/
+
+### Next.js frontend (built by ./gradlew deployFrontend) ###
+/frontend/
